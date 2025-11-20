@@ -10,6 +10,10 @@ import {
 import { Lead, ViewState, Stats, LeadStatus } from './types';
 import { AGENTS } from './constants';
 
+// Updated key to force fresh load from CSV
+const STORAGE_KEY = "lp_sales_leads_v2";
+const CSV_URL = '/outreach-leads.csv';
+
 export default function App() {
   const [user, setUser] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -135,7 +139,7 @@ export default function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const saved = window.localStorage.getItem("lp_leads_live");
+        const saved = window.localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed.length > 0) {
@@ -145,7 +149,7 @@ export default function App() {
         }
 
         // Fetch CSV if no local data
-        const response = await fetch('/outreach-list.csv');
+        const response = await fetch(CSV_URL);
         if (!response.ok) throw new Error('Failed to fetch CSV');
         const text = await response.text();
         const initialLeads = parseCSV(text);
@@ -162,7 +166,7 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== "undefined" && leads.length > 0) {
       try {
-        window.localStorage.setItem("lp_leads_live", JSON.stringify(leads));
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
       } catch (e) {
         console.error("Failed to save leads to localStorage", e);
       }
@@ -233,16 +237,31 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        // We use the same parse function but might want to override assignment logic if importing personally?
-        // For now, use the standard round-robin logic embedded in parseCSV, or override assignments to current user.
-        // Let's reuse parseCSV but override assignment to current user to keep imports personal.
-        const newLeads = parseCSV(text).map(l => ({ ...l, assignedAgent: user || l.assignedAgent }));
+        
+        // Use the same parse function but handle assignment carefully
+        const parsed = parseCSV(text);
+        
+        // Get current phone numbers/emails to dedup
+        const existingPhones = new Set(leads.map(l => l.phone.replace(/\D/g, '')));
+        const existingEmails = new Set(leads.map(l => l.email.toLowerCase()));
+
+        const newLeads = parsed.filter(l => {
+            const p = l.phone.replace(/\D/g, '');
+            const e = l.email.toLowerCase();
+            if (p && existingPhones.has(p)) return false;
+            if (e && existingEmails.has(e)) return false;
+            return true;
+        }).map((l, index) => ({
+            ...l,
+             // Distribute newly imported leads among all agents to avoid duplicates and load balance
+             assignedAgent: AGENTS[index % AGENTS.length]
+        }));
         
         if (newLeads.length > 0) {
             setLeads(prev => [...prev, ...newLeads]);
-            alert(`Successfully imported ${newLeads.length} leads. They have been assigned to you.`);
+            alert(`Successfully imported ${newLeads.length} new leads. They have been distributed among all agents.`);
         } else {
-            alert("No valid leads found in CSV.");
+            alert("No new valid leads found in CSV (duplicates skipped).");
         }
       } catch (error) {
         console.error("CSV Parse Error", error);

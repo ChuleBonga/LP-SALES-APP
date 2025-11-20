@@ -22,6 +22,8 @@ export type ViewState = 'dashboard' | 'leads' | 'call';
 export interface Stats {
   total: number;
   calledToday: number;
+  weeklyProgress: number;
+  weeklyGoal: number;
   new: number;
   closed: number;
   followUp: number;

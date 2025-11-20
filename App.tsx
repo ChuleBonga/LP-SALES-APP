@@ -5,7 +5,7 @@ import { LeadCard } from './components/LeadCard';
 import { CallView } from './components/CallView';
 import { LoginScreen } from './components/LoginScreen';
 import { 
-  Phone, Clock, BarChart2, User as UserIcon, Filter, FileText, ChevronRight 
+  Phone, Clock, BarChart2, User as UserIcon, Filter, FileText, ChevronRight, Target
 } from 'lucide-react';
 import { Lead, ViewState, Stats, LeadStatus } from './types';
 import { INITIAL_LEADS } from './constants';
@@ -47,10 +47,29 @@ export default function App() {
   }, [leads, user]);
 
   const stats: Stats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Calculate start of current week (Monday)
+    const startOfWeek = new Date(today);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const callsThisWeek = myLeads.filter((l) => {
+      if (!l.lastContact) return false;
+      const contactDate = new Date(l.lastContact);
+      // Reset hours to ensure fair date comparison
+      contactDate.setHours(0,0,0,0); 
+      return contactDate >= startOfWeek;
+    }).length;
+
     return {
       total: myLeads.length,
-      calledToday: myLeads.filter((l) => l.lastContact === today).length,
+      calledToday: myLeads.filter((l) => l.lastContact === todayStr).length,
+      weeklyProgress: callsThisWeek,
+      weeklyGoal: 100,
       new: myLeads.filter((l) => l.status === 'New').length,
       closed: myLeads.filter((l) => l.status === 'Closed').length,
       followUp: myLeads.filter((l) => l.status === 'Follow Up').length,
@@ -211,7 +230,9 @@ export default function App() {
                 <h2 className="text-4xl font-extrabold text-brand-dark tracking-tight">
                   Good Afternoon, {user}
                 </h2>
-                <p className="text-gray-500 mt-2 text-lg">Ready to connect the world today?</p>
+                <p className="text-gray-500 mt-2 text-lg">
+                  You are <span className="font-bold text-brand-light">{Math.max(0, stats.weeklyGoal - stats.weeklyProgress)}</span> calls away from your weekly goal.
+                </p>
               </div>
               <button
                 onClick={() => {
@@ -228,10 +249,23 @@ export default function App() {
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Custom Weekly Goal Card */}
+              <div className="bg-white p-6 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-gray-100 flex items-center space-x-4 hover:-translate-y-1 transition-transform duration-300 group cursor-default">
+                <div className="p-4 rounded-full bg-teal-50 bg-opacity-50 group-hover:bg-opacity-100 transition-all">
+                  <Target className="w-6 h-6 text-teal-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Weekly Goal</p>
+                  <div className="flex items-baseline gap-1">
+                    <h3 className="text-3xl font-extrabold text-gray-800 mt-1">{stats.weeklyProgress}</h3>
+                    <span className="text-sm text-gray-400 font-semibold">/ {stats.weeklyGoal}</span>
+                  </div>
+                </div>
+              </div>
+
               <StatCard title="Calls Made Today" value={stats.calledToday} icon={Phone} color="text-blue-600" bgColor="bg-blue-50" />
               <StatCard title="Needs Call Back" value={stats.followUp} icon={Clock} color="text-amber-500" bgColor="bg-amber-50" />
               <StatCard title="Closed Deals" value={stats.closed} icon={BarChart2} color="text-green-500" bgColor="bg-green-50" />
-              <StatCard title="New Leads" value={stats.new} icon={UserIcon} color="text-purple-500" bgColor="bg-purple-50" />
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

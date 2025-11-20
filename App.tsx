@@ -9,16 +9,22 @@ import {
 } from 'lucide-react';
 import { Lead, ViewState, Stats, LeadStatus } from './types';
 import { AGENTS } from './constants';
+import './services/firebase'; // Ensure Firebase inits
 
 // Updated key to force fresh load from CSV
-const STORAGE_KEY = "lp_sales_leads_v2";
-const CSV_URL = '/outreach-leads.csv';
+const STORAGE_KEY = "lp_sales_leads_v3";
+const CSV_URL = '/outreach-list.csv';
 
 export default function App() {
   const [user, setUser] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [view, setView] = useState<ViewState>('dashboard');
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  
+  // Filter State
+  const [showFilter, setShowFilter] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'All'>('All');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const parseCSV = (text: string): Lead[] => {
@@ -173,13 +179,22 @@ export default function App() {
     }
   }, [leads]);
 
-  // Filter leads for the current user
+  // Filter leads for the current user & status filter
   const myLeads = useMemo(() => {
     if (!user) return [];
-    return leads.filter(lead => lead.assignedAgent === user);
-  }, [leads, user]);
+    let filtered = leads.filter(lead => lead.assignedAgent === user);
+    
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter(lead => lead.status === statusFilter);
+    }
+    
+    return filtered;
+  }, [leads, user, statusFilter]);
 
   const stats: Stats = useMemo(() => {
+    // Calculate stats based on USER leads (ignoring status filter for stats)
+    const userTotalLeads = leads.filter(lead => lead.assignedAgent === user);
+
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     
@@ -190,7 +205,7 @@ export default function App() {
     startOfWeek.setDate(diff);
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const callsThisWeek = myLeads.filter((l) => {
+    const callsThisWeek = userTotalLeads.filter((l) => {
       if (!l.lastContact) return false;
       const contactDate = new Date(l.lastContact);
       // Reset hours to ensure fair date comparison
@@ -199,15 +214,15 @@ export default function App() {
     }).length;
 
     return {
-      total: myLeads.length,
-      calledToday: myLeads.filter((l) => l.lastContact === todayStr).length,
+      total: userTotalLeads.length,
+      calledToday: userTotalLeads.filter((l) => l.lastContact === todayStr).length,
       weeklyProgress: callsThisWeek,
       weeklyGoal: 100,
-      new: myLeads.filter((l) => l.status === 'New').length,
-      closed: myLeads.filter((l) => l.status === 'Closed').length,
-      followUp: myLeads.filter((l) => l.status === 'Follow Up').length,
+      new: userTotalLeads.filter((l) => l.status === 'New').length,
+      closed: userTotalLeads.filter((l) => l.status === 'Closed').length,
+      followUp: userTotalLeads.filter((l) => l.status === 'Follow Up').length,
     };
-  }, [myLeads]);
+  }, [leads, user]);
 
   const handleStartCall = (lead: Lead) => {
     setActiveLead(lead);
@@ -272,6 +287,38 @@ export default function App() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Basic CSV Export functionality to get data OUT of the app
+  const downloadCSV = () => {
+    const headers = ['School Name', 'ADMIN FIRST NAME', 'ADMIN EMAIL', 'Telephone Number', 'Called Y/N', 'Response Notes', 'Assigned Agent', 'Status', 'Last Contact'];
+    const csvRows = [headers.join(',')];
+
+    leads.forEach(lead => {
+        const row = [
+            `"${lead.company}"`,
+            `"${lead.firstName} ${lead.lastName}"`,
+            `"${lead.email}"`,
+            `"${lead.phone}"`,
+            `"${lead.status === 'New' ? '' : 'Yes'}"`,
+            `"${lead.notes.replace(/"/g, '""')}"`,
+            `"${lead.assignedAgent || ''}"`,
+            `"${lead.status}"`,
+            `"${lead.lastContact || ''}"`
+        ];
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'updated_leads_export.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+
   if (!user) {
     return <LoginScreen onLogin={setUser} />;
   }
@@ -306,17 +353,26 @@ export default function App() {
                   You are <span className="font-bold text-brand-light">{Math.max(0, stats.weeklyGoal - stats.weeklyProgress)}</span> calls away from your weekly goal.
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  const nextLead = myLeads.find((l) => l.status === 'New');
-                  if (nextLead) handleStartCall(nextLead);
-                  else setView('leads');
-                }}
-                className="bg-gradient-to-r from-brand-dark to-brand-light hover:from-[#002a42] hover:to-[#0077a3] text-white px-8 py-4 rounded-full shadow-lg flex items-center space-x-3 transition-all transform hover:scale-105 font-bold text-lg w-full md:w-auto justify-center"
-              >
-                <Phone className="w-6 h-6 animate-pulse" />
-                <span>Start Power Hour</span>
-              </button>
+              <div className="flex gap-3 w-full md:w-auto">
+                 <button
+                    onClick={downloadCSV}
+                    className="bg-white border-2 border-gray-200 text-gray-600 hover:border-brand-light hover:text-brand-light px-6 py-4 rounded-full shadow-sm flex items-center space-x-2 transition-all font-bold text-sm w-full md:w-auto justify-center"
+                  >
+                    <FileText className="w-5 h-5" />
+                    <span>Export Updated CSV</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const nextLead = myLeads.find((l) => l.status === 'New');
+                      if (nextLead) handleStartCall(nextLead);
+                      else setView('leads');
+                    }}
+                    className="bg-gradient-to-r from-brand-dark to-brand-light hover:from-[#002a42] hover:to-[#0077a3] text-white px-8 py-4 rounded-full shadow-lg flex items-center space-x-3 transition-all transform hover:scale-105 font-bold text-lg w-full md:w-auto justify-center"
+                  >
+                    <Phone className="w-6 h-6 animate-pulse" />
+                    <span>Start Power Hour</span>
+                  </button>
+              </div>
             </div>
 
             {/* Stats */}
@@ -402,30 +458,69 @@ export default function App() {
         {/* LEADS LIST VIEW */}
         {view === 'leads' && (
           <div className="animate-fade-in space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <h2 className="text-3xl font-bold text-brand-dark">Your Assigned Leads</h2>
-              <div className="flex space-x-3 w-full md:w-auto">
-                <button className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 font-medium shadow-sm transition-colors">
-                  <Filter className="w-4 h-4" />
-                  <span>Filter</span>
-                </button>
-                <button 
-                  onClick={handleImportClick}
-                  className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 font-medium shadow-sm transition-colors"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Import CSV</span>
-                </button>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <h2 className="text-3xl font-bold text-brand-dark">
+                  {statusFilter !== 'All' ? `${statusFilter} Leads` : 'Your Assigned Leads'}
+                  <span className="ml-3 text-lg font-medium text-gray-400">({myLeads.length})</span>
+                </h2>
+                <div className="flex space-x-3 w-full md:w-auto">
+                  <button 
+                    onClick={() => setShowFilter(!showFilter)}
+                    className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 border rounded-lg font-medium shadow-sm transition-colors ${
+                      showFilter || statusFilter !== 'All'
+                        ? 'bg-brand-light text-white border-brand-light' 
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Filter className="w-4 h-4" />
+                    <span>{statusFilter !== 'All' ? statusFilter : 'Filter'}</span>
+                  </button>
+                  <button 
+                    onClick={handleImportClick}
+                    className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 font-medium shadow-sm transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Import CSV</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Filter Options Bar */}
+              {showFilter && (
+                <div className="flex flex-wrap gap-2 p-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-fade-in-up">
+                  {(['All', 'New', 'In Progress', 'Follow Up', 'Closed', 'Lost'] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all ${
+                        statusFilter === status
+                          ? 'bg-brand-dark text-white shadow-md'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {myLeads.length > 0 ? (
                 myLeads.map((lead) => (
                   <LeadCard key={lead.id} lead={lead} onCall={handleStartCall} />
                 ))
               ) : (
-                <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-200 text-gray-500">
-                  No leads found. Wait for data to load...
+                <div className="col-span-full text-center py-20 bg-white rounded-xl border border-gray-200 text-gray-400 flex flex-col items-center">
+                  <Filter className="w-12 h-12 mb-4 opacity-20" />
+                  <p className="text-lg font-medium">No leads found matching "{statusFilter}"</p>
+                  <button 
+                    onClick={() => setStatusFilter('All')}
+                    className="mt-4 text-brand-light hover:underline text-sm font-bold"
+                  >
+                    Clear Filters
+                  </button>
                 </div>
               )}
             </div>

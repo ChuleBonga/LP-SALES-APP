@@ -3,7 +3,6 @@
 
 export const generateFollowUpEmail = async (
   firstName: string, 
-  lastName: string, 
   company: string, 
   notes: string
 ): Promise<string> => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 
 const AGENTS = ['Ziggy', 'Nathan', 'Veda', 'Emily', 'Zoe'];
 

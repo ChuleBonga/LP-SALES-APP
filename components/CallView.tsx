@@ -42,7 +42,8 @@ export const CallView: React.FC<CallViewProps> = ({ lead, onUpdateLead, onCancel
   const handleDraftEmail = async () => {
     setIsGeneratingEmail(true);
     const notes = callNotes || "No specific notes.";
-    const email = await generateFollowUpEmail(lead.firstName, lead.lastName, lead.company, notes);
+    // Removed lastName from function call as it is unused in the service
+    const email = await generateFollowUpEmail(lead.firstName, lead.company, notes);
     setDraftEmail(email);
     setIsGeneratingEmail(false);
   };

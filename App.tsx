@@ -8,30 +8,159 @@ import {
   Phone, Clock, BarChart2, User as UserIcon, Filter, FileText, ChevronRight, Target
 } from 'lucide-react';
 import { Lead, ViewState, Stats, LeadStatus } from './types';
-import { INITIAL_LEADS } from './constants';
+import { AGENTS } from './constants';
 
 export default function App() {
   const [user, setUser] = useState<string | null>(null);
-  
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    if (typeof window === "undefined") {
-      return INITIAL_LEADS;
-    }
-    try {
-      const saved = window.localStorage.getItem("lp_leads_live");
-      return saved ? JSON.parse(saved) : INITIAL_LEADS;
-    } catch {
-      return INITIAL_LEADS;
-    }
-  });
-
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [view, setView] = useState<ViewState>('dashboard');
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const parseCSV = (text: string): Lead[] => {
+    const lines = text.split(/\r\n|\n/);
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+    
+    const mapHeader = (key: string) => headers.findIndex(h => h.includes(key));
+
+    const idxSchoolName = mapHeader('school name');
+    const idxCompany = idxSchoolName !== -1 ? idxSchoolName : mapHeader('company');
+    
+    const idxAdminFirst = mapHeader('admin first name');
+    const idxFirst = idxAdminFirst !== -1 ? idxAdminFirst : mapHeader('first');
+    
+    // If "admin first name" exists but "last" doesn't, we'll split the first name later
+    const idxLast = mapHeader('last'); 
+    
+    const idxPhone = mapHeader('telephone');
+    const idxPhoneAlt = mapHeader('phone');
+    const finalPhoneIdx = idxPhone !== -1 ? idxPhone : idxPhoneAlt;
+
+    const idxEmail = mapHeader('email');
+    const idxStatus = mapHeader('called y/n'); // Custom mapping for this specific CSV
+    const idxNotes = mapHeader('response notes');
+    
+    const parseLine = (line: string) => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                if (inQuotes && line[i+1] === '"') {
+                    current += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current.trim());
+        return result;
+    };
+
+    const newLeads: Lead[] = [];
+    let currentId = Math.max(...leads.map(l => l.id), 0) + 1;
+
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const cols = parseLine(lines[i]);
+      
+      if (cols.length < 2) continue;
+
+      // Handle Name Parsing
+      let firstName = 'Unknown';
+      let lastName = '';
+
+      const rawName = idxFirst !== -1 ? cols[idxFirst] : '';
+      if (idxLast === -1 && rawName) {
+         // Split full name if last name column is missing
+         const parts = rawName.split(' ');
+         if (parts.length > 1) {
+           firstName = parts[0];
+           lastName = parts.slice(1).join(' ');
+         } else {
+           firstName = rawName;
+         }
+      } else {
+         firstName = rawName || 'Unknown';
+         lastName = idxLast !== -1 ? cols[idxLast] : '';
+      }
+
+      const company = idxCompany !== -1 ? cols[idxCompany] : 'Unknown School';
+      
+      if (firstName === 'Unknown' && company === 'Unknown School') continue;
+
+      // Handle Status Mapping from CSV
+      const rawStatusCol = idxStatus !== -1 ? cols[idxStatus] : '';
+      let status: LeadStatus = 'New';
+      let notes = idxNotes !== -1 ? cols[idxNotes] : '';
+
+      if (rawStatusCol.toLowerCase().includes("yes called")) {
+         status = 'In Progress';
+      } else if (rawStatusCol.toLowerCase().includes("no answer")) {
+         status = 'Follow Up';
+      }
+      
+      // Auto-distribute assignments
+      const assignedAgent = AGENTS[(i - 1) % AGENTS.length];
+
+      newLeads.push({
+        id: currentId++,
+        firstName,
+        lastName,
+        company,
+        phone: finalPhoneIdx !== -1 ? cols[finalPhoneIdx] : '',
+        email: idxEmail !== -1 ? cols[idxEmail] : '',
+        status,
+        notes: notes,
+        lastContact: null, // Could parse from notes if date exists, keeping null for now
+        timezone: 'PST',
+        officeHours: '8:00 AM - 4:00 PM',
+        assignedAgent
+      });
+    }
+    return newLeads;
+  };
+
+  // Load initial data from local storage or fetch CSV
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const saved = window.localStorage.getItem("lp_leads_live");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.length > 0) {
+             setLeads(parsed);
+             return;
+          }
+        }
+
+        // Fetch CSV if no local data
+        const response = await fetch('/outreach-list.csv');
+        if (!response.ok) throw new Error('Failed to fetch CSV');
+        const text = await response.text();
+        const initialLeads = parseCSV(text);
+        setLeads(initialLeads);
+      } catch (e) {
+        console.error("Failed to load initial data", e);
+      }
+    };
+    
+    loadData();
+  }, []);
+
   // Persist leads to local storage
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && leads.length > 0) {
       try {
         window.localStorage.setItem("lp_leads_live", JSON.stringify(leads));
       } catch (e) {
@@ -96,86 +225,6 @@ export default function App() {
     fileInputRef.current?.click();
   };
 
-  const parseCSV = (text: string): Lead[] => {
-    const lines = text.split(/\r\n|\n/);
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
-    
-    const mapHeader = (key: string) => headers.findIndex(h => h.includes(key));
-
-    const idxFirst = mapHeader('first');
-    const idxLast = mapHeader('last');
-    const idxCompany = mapHeader('company');
-    const idxPhone = mapHeader('phone');
-    const idxEmail = mapHeader('email');
-    const idxStatus = mapHeader('status');
-    const idxNotes = mapHeader('note');
-    
-    const parseLine = (line: string) => {
-        const result = [];
-        let current = '';
-        let inQuotes = false;
-        
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                if (inQuotes && line[i+1] === '"') {
-                    current += '"';
-                    i++;
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (char === ',' && !inQuotes) {
-                result.push(current.trim());
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-        result.push(current.trim());
-        return result;
-    };
-
-    const newLeads: Lead[] = [];
-    let currentId = Math.max(...leads.map(l => l.id), 0) + 1;
-
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      const cols = parseLine(lines[i]);
-      
-      if (cols.length < 2) continue;
-
-      const firstName = idxFirst !== -1 ? cols[idxFirst] : 'Unknown';
-      const lastName = idxLast !== -1 ? cols[idxLast] : '';
-      const company = idxCompany !== -1 ? cols[idxCompany] : 'Unknown Company';
-      
-      if (firstName === 'Unknown' && company === 'Unknown Company') continue;
-
-      const rawStatus = idxStatus !== -1 ? cols[idxStatus] : 'New';
-      const validStatuses: LeadStatus[] = ['New', 'In Progress', 'Follow Up', 'Closed', 'Lost'];
-      const status: LeadStatus = validStatuses.includes(rawStatus as LeadStatus) 
-        ? (rawStatus as LeadStatus) 
-        : 'New';
-
-      newLeads.push({
-        id: currentId++,
-        firstName,
-        lastName,
-        company,
-        phone: idxPhone !== -1 ? cols[idxPhone] : '',
-        email: idxEmail !== -1 ? cols[idxEmail] : '',
-        status,
-        notes: idxNotes !== -1 ? cols[idxNotes] : '',
-        lastContact: null,
-        timezone: 'PST',
-        officeHours: '9:00 AM - 5:00 PM',
-        assignedAgent: user || undefined // Assign to current user
-      });
-    }
-    return newLeads;
-  };
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -184,7 +233,11 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const newLeads = parseCSV(text);
+        // We use the same parse function but might want to override assignment logic if importing personally?
+        // For now, use the standard round-robin logic embedded in parseCSV, or override assignments to current user.
+        // Let's reuse parseCSV but override assignment to current user to keep imports personal.
+        const newLeads = parseCSV(text).map(l => ({ ...l, assignedAgent: user || l.assignedAgent }));
+        
         if (newLeads.length > 0) {
             setLeads(prev => [...prev, ...newLeads]);
             alert(`Successfully imported ${newLeads.length} leads. They have been assigned to you.`);
@@ -353,7 +406,7 @@ export default function App() {
                 ))
               ) : (
                 <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-200 text-gray-500">
-                  No leads found. Import a CSV to get started.
+                  No leads found. Wait for data to load...
                 </div>
               )}
             </div>

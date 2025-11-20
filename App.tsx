@@ -5,7 +5,7 @@ import { LeadCard } from './components/LeadCard';
 import { CallView } from './components/CallView';
 import { LoginScreen } from './components/LoginScreen';
 import { 
-  Phone, Clock, BarChart2, User as UserIcon, Filter, FileText, ChevronRight, Target
+  Phone, Clock, BarChart2, Filter, FileText, ChevronRight, Target
 } from 'lucide-react';
 import { Lead, ViewState, Stats, LeadStatus } from './types';
 import { AGENTS } from './constants';

@@ -12,7 +12,7 @@ import { AGENTS } from './constants';
 import './services/firebase'; // Ensure Firebase inits
 
 // Updated key to force fresh load from CSV
-const STORAGE_KEY = "lp_sales_leads_v3";
+const STORAGE_KEY = "lp_sales_leads_v4";
 const CSV_URL = '/outreach-list.csv';
 
 export default function App() {
@@ -111,9 +111,11 @@ export default function App() {
       if (firstName === 'Unknown' && company === 'Unknown School') continue;
 
       // Handle Status Mapping from CSV
-      const rawStatusCol = idxStatus !== -1 ? cols[idxStatus] : '';
+      // FIXED: Added safe access (|| '') to prevent crash on undefined columns
+      const rawStatusCol = idxStatus !== -1 ? (cols[idxStatus] || '') : '';
       let status: LeadStatus = 'New';
-      let notes = idxNotes !== -1 ? cols[idxNotes] : '';
+      // FIXED: Added safe access (|| '')
+      let notes = idxNotes !== -1 ? (cols[idxNotes] || '') : '';
 
       if (rawStatusCol.toLowerCase().includes("yes called")) {
          status = 'In Progress';
@@ -129,8 +131,8 @@ export default function App() {
         firstName,
         lastName,
         company,
-        phone: finalPhoneIdx !== -1 ? cols[finalPhoneIdx] : '',
-        email: idxEmail !== -1 ? cols[idxEmail] : '',
+        phone: finalPhoneIdx !== -1 ? (cols[finalPhoneIdx] || '') : '',
+        email: idxEmail !== -1 ? (cols[idxEmail] || '') : '',
         status,
         notes: notes,
         lastContact: null, // Could parse from notes if date exists, keeping null for now
@@ -157,7 +159,7 @@ export default function App() {
 
         // Fetch CSV if no local data
         const response = await fetch(CSV_URL);
-        if (!response.ok) throw new Error('Failed to fetch CSV');
+        if (!response.ok) throw new Error(`Failed to fetch CSV: ${response.statusText}`);
         const text = await response.text();
         const initialLeads = parseCSV(text);
         setLeads(initialLeads);

@@ -5,7 +5,7 @@ import { LeadCard } from './components/LeadCard';
 import { CallView } from './components/CallView';
 import { LoginScreen } from './components/LoginScreen';
 import { 
-  Phone, Clock, BarChart2, Filter, FileText, ChevronRight, Target
+  Phone, Clock, BarChart2, Filter, FileText, ChevronRight, Target, ArrowUpDown
 } from 'lucide-react';
 import { Lead, ViewState, Stats, LeadStatus } from './types';
 import { AGENTS } from './constants';
@@ -21,9 +21,10 @@ export default function App() {
   const [view, setView] = useState<ViewState>('dashboard');
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
   
-  // Filter State
+  // Filter & Sort State
   const [showFilter, setShowFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'All'>('All');
+  const [sortOption, setSortOption] = useState<string>('default');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -179,7 +180,7 @@ export default function App() {
     }
   }, [leads]);
 
-  // Filter leads for the current user & status filter
+  // Filter & Sort leads for the current user
   const myLeads = useMemo(() => {
     if (!user) return [];
     let filtered = leads.filter(lead => lead.assignedAgent === user);
@@ -187,9 +188,30 @@ export default function App() {
     if (statusFilter !== 'All') {
       filtered = filtered.filter(lead => lead.status === statusFilter);
     }
+
+    if (sortOption !== 'default') {
+      filtered.sort((a, b) => {
+        if (sortOption === 'name') {
+          return (a.firstName + ' ' + a.lastName).localeCompare(b.firstName + ' ' + b.lastName);
+        }
+        if (sortOption === 'company') {
+          return a.company.localeCompare(b.company);
+        }
+        if (sortOption === 'status') {
+          return a.status.localeCompare(b.status);
+        }
+        if (sortOption === 'lastContact') {
+          if (!a.lastContact && !b.lastContact) return 0;
+          if (!a.lastContact) return 1;
+          if (!b.lastContact) return -1;
+          return b.lastContact.localeCompare(a.lastContact);
+        }
+        return 0;
+      });
+    }
     
     return filtered;
-  }, [leads, user, statusFilter]);
+  }, [leads, user, statusFilter, sortOption]);
 
   const stats: Stats = useMemo(() => {
     // Calculate stats based on USER leads (ignoring status filter for stats)
@@ -464,10 +486,26 @@ export default function App() {
                   {statusFilter !== 'All' ? `${statusFilter} Leads` : 'Your Assigned Leads'}
                   <span className="ml-3 text-lg font-medium text-gray-400">({myLeads.length})</span>
                 </h2>
-                <div className="flex space-x-3 w-full md:w-auto">
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                  {/* Sort Dropdown */}
+                  <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 shadow-sm flex-grow md:flex-grow-0">
+                    <ArrowUpDown className="w-4 h-4 text-gray-500" />
+                    <select 
+                      value={sortOption} 
+                      onChange={(e) => setSortOption(e.target.value)}
+                      className="bg-transparent border-none text-gray-600 text-sm font-medium focus:ring-0 cursor-pointer outline-none pr-2"
+                    >
+                      <option value="default">Sort by Default</option>
+                      <option value="name">Name (A-Z)</option>
+                      <option value="company">Company (A-Z)</option>
+                      <option value="status">Status</option>
+                      <option value="lastContact">Last Contact (Recent)</option>
+                    </select>
+                  </div>
+
                   <button 
                     onClick={() => setShowFilter(!showFilter)}
-                    className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 border rounded-lg font-medium shadow-sm transition-colors ${
+                    className={`flex-grow md:flex-grow-0 flex items-center justify-center space-x-2 px-5 py-2.5 border rounded-lg font-medium shadow-sm transition-colors ${
                       showFilter || statusFilter !== 'All'
                         ? 'bg-brand-light text-white border-brand-light' 
                         : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
@@ -478,7 +516,7 @@ export default function App() {
                   </button>
                   <button 
                     onClick={handleImportClick}
-                    className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 font-medium shadow-sm transition-colors"
+                    className="flex-grow md:flex-grow-0 flex items-center justify-center space-x-2 px-5 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 font-medium shadow-sm transition-colors"
                   >
                     <FileText className="w-4 h-4" />
                     <span>Import CSV</span>

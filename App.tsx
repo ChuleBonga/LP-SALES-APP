@@ -12,7 +12,7 @@ import { AGENTS } from './constants';
 import './services/firebase'; // Ensure Firebase inits
 
 // Updated key to force fresh load from CSV
-const STORAGE_KEY = "lp_sales_leads_v4";
+const STORAGE_KEY = "lp_sales_leads_v5";
 const CSV_URL = '/outreach-list.csv';
 
 export default function App() {

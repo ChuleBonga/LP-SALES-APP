@@ -57,7 +57,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </div>
           </div>
           <div className="bg-slate-50 p-4 text-center border-t border-gray-100">
-            <p className="text-xs text-gray-400 font-medium">Authorized Access Only • v2.4.0</p>
+            <p className="text-xs text-gray-400 font-medium">Authorized Access Only • v3.0.0</p>
           </div>
         </div>
       </div>

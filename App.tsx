@@ -4,6 +4,8 @@ import { StatCard } from './components/StatCard';
 import { LeadCard } from './components/LeadCard';
 import { CallView } from './components/CallView';
 import { LoginScreen } from './components/LoginScreen';
+import { CelebrationOverlay } from './components/CelebrationOverlay';
+import { QuoteWidget } from './components/QuoteWidget';
 import { 
   Phone, Clock, BarChart2, Filter, FileText, ChevronRight, Target, ArrowUpDown
 } from 'lucide-react';
@@ -12,7 +14,7 @@ import { AGENTS } from './constants';
 import './services/firebase'; // Ensure Firebase inits
 
 // Updated key to force fresh load from CSV
-const STORAGE_KEY = "lp_sales_leads_v5";
+const STORAGE_KEY = "lp_sales_leads_v6";
 const CSV_URL = '/outreach-list.csv';
 
 export default function App() {
@@ -25,6 +27,9 @@ export default function App() {
   const [showFilter, setShowFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'All'>('All');
   const [sortOption, setSortOption] = useState<string>('default');
+
+  // Gamification State
+  const [triggerCelebration, setTriggerCelebration] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +47,6 @@ export default function App() {
     const idxAdminFirst = mapHeader('admin first name');
     const idxFirst = idxAdminFirst !== -1 ? idxAdminFirst : mapHeader('first');
     
-    // If "admin first name" exists but "last" doesn't, we'll split the first name later
     const idxLast = mapHeader('last'); 
     
     const idxPhone = mapHeader('telephone');
@@ -50,7 +54,7 @@ export default function App() {
     const finalPhoneIdx = idxPhone !== -1 ? idxPhone : idxPhoneAlt;
 
     const idxEmail = mapHeader('email');
-    const idxStatus = mapHeader('called y/n'); // Custom mapping for this specific CSV
+    const idxStatus = mapHeader('called y/n'); 
     const idxNotes = mapHeader('response notes');
     
     const parseLine = (line: string) => {
@@ -93,7 +97,6 @@ export default function App() {
 
       const rawName = idxFirst !== -1 ? cols[idxFirst] : '';
       if (idxLast === -1 && rawName) {
-         // Split full name if last name column is missing
          const parts = rawName.split(' ');
          if (parts.length > 1) {
            firstName = parts[0];
@@ -110,11 +113,8 @@ export default function App() {
       
       if (firstName === 'Unknown' && company === 'Unknown School') continue;
 
-      // Handle Status Mapping from CSV
-      // FIXED: Added safe access (|| '') to prevent crash on undefined columns
       const rawStatusCol = idxStatus !== -1 ? (cols[idxStatus] || '') : '';
       let status: LeadStatus = 'New';
-      // FIXED: Added safe access (|| '')
       let notes = idxNotes !== -1 ? (cols[idxNotes] || '') : '';
 
       if (rawStatusCol.toLowerCase().includes("yes called")) {
@@ -123,7 +123,6 @@ export default function App() {
          status = 'Follow Up';
       }
       
-      // Auto-distribute assignments
       const assignedAgent = AGENTS[(i - 1) % AGENTS.length];
 
       newLeads.push({
@@ -135,7 +134,7 @@ export default function App() {
         email: idxEmail !== -1 ? (cols[idxEmail] || '') : '',
         status,
         notes: notes,
-        lastContact: null, // Could parse from notes if date exists, keeping null for now
+        lastContact: null, 
         timezone: 'PST',
         officeHours: '8:00 AM - 4:00 PM',
         assignedAgent
@@ -144,7 +143,6 @@ export default function App() {
     return newLeads;
   };
 
-  // Load initial data from local storage or fetch CSV
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -157,7 +155,6 @@ export default function App() {
           }
         }
 
-        // Fetch CSV if no local data
         const response = await fetch(CSV_URL);
         if (!response.ok) throw new Error(`Failed to fetch CSV: ${response.statusText}`);
         const text = await response.text();
@@ -171,7 +168,6 @@ export default function App() {
     loadData();
   }, []);
 
-  // Persist leads to local storage
   useEffect(() => {
     if (typeof window !== "undefined" && leads.length > 0) {
       try {
@@ -182,7 +178,6 @@ export default function App() {
     }
   }, [leads]);
 
-  // Filter & Sort leads for the current user
   const myLeads = useMemo(() => {
     if (!user) return [];
     let filtered = leads.filter(lead => lead.assignedAgent === user);
@@ -216,23 +211,20 @@ export default function App() {
   }, [leads, user, statusFilter, sortOption]);
 
   const stats: Stats = useMemo(() => {
-    // Calculate stats based on USER leads (ignoring status filter for stats)
     const userTotalLeads = leads.filter(lead => lead.assignedAgent === user);
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     
-    // Calculate start of current week (Monday)
     const startOfWeek = new Date(today);
     const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); 
     startOfWeek.setDate(diff);
     startOfWeek.setHours(0, 0, 0, 0);
 
     const callsThisWeek = userTotalLeads.filter((l) => {
       if (!l.lastContact) return false;
       const contactDate = new Date(l.lastContact);
-      // Reset hours to ensure fair date comparison
       contactDate.setHours(0,0,0,0); 
       return contactDate >= startOfWeek;
     }).length;
@@ -255,6 +247,12 @@ export default function App() {
 
   const handleUpdateLead = (updatedLead: Lead) => {
     setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+    
+    if (updatedLead.status === 'Closed') {
+      setTriggerCelebration(true);
+      setTimeout(() => setTriggerCelebration(false), 5000);
+    }
+
     setActiveLead(null);
     setView('leads');
   };
@@ -276,11 +274,8 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        
-        // Use the same parse function but handle assignment carefully
         const parsed = parseCSV(text);
         
-        // Get current phone numbers/emails to dedup
         const existingPhones = new Set(leads.map(l => l.phone.replace(/\D/g, '')));
         const existingEmails = new Set(leads.map(l => l.email.toLowerCase()));
 
@@ -292,7 +287,6 @@ export default function App() {
             return true;
         }).map((l, index) => ({
             ...l,
-             // Distribute newly imported leads among all agents to avoid duplicates and load balance
              assignedAgent: AGENTS[index % AGENTS.length]
         }));
         
@@ -311,7 +305,6 @@ export default function App() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Basic CSV Export functionality to get data OUT of the app
   const downloadCSV = () => {
     const headers = ['School Name', 'ADMIN FIRST NAME', 'ADMIN EMAIL', 'Telephone Number', 'Called Y/N', 'Response Notes', 'Assigned Agent', 'Status', 'Last Contact'];
     const csvRows = [headers.join(',')];
@@ -349,6 +342,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-brand-light selection:text-white">
+      {triggerCelebration && <CelebrationOverlay />}
+      
       <Header 
         view={view} 
         setView={setView} 
@@ -365,7 +360,6 @@ export default function App() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* DASHBOARD VIEW */}
         {view === 'dashboard' && (
           <div className="space-y-8 animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between items-end border-b border-gray-200 pb-8 gap-4">
@@ -399,9 +393,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* Stats */}
+            <QuoteWidget />
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Custom Weekly Goal Card */}
               <div className="bg-white p-6 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-gray-100 flex items-center space-x-4 hover:-translate-y-1 transition-transform duration-300 group cursor-default">
                 <div className="p-4 rounded-full bg-teal-50 bg-opacity-50 group-hover:bg-opacity-100 transition-all">
                   <Target className="w-6 h-6 text-teal-600" />
@@ -479,7 +473,6 @@ export default function App() {
           </div>
         )}
 
-        {/* LEADS LIST VIEW */}
         {view === 'leads' && (
           <div className="animate-fade-in space-y-6">
             <div className="flex flex-col gap-4">
@@ -489,7 +482,6 @@ export default function App() {
                   <span className="ml-3 text-lg font-medium text-gray-400">({myLeads.length})</span>
                 </h2>
                 <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                  {/* Sort Dropdown */}
                   <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 shadow-sm flex-grow md:flex-grow-0">
                     <ArrowUpDown className="w-4 h-4 text-gray-500" />
                     <select 
@@ -526,7 +518,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Filter Options Bar */}
               {showFilter && (
                 <div className="flex flex-wrap gap-2 p-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-fade-in-up">
                   {(['All', 'New', 'In Progress', 'Follow Up', 'Closed', 'Lost'] as const).map((status) => (
@@ -567,7 +558,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ACTIVE CALL VIEW */}
         {view === 'call' && activeLead && (
           <CallView 
             lead={activeLead} 

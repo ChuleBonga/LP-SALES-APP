@@ -18,10 +18,15 @@ export const QUOTES: SalesQuote[] = [
     { category: "Customer Focus", text: "People don’t buy what you do; they buy why you do it.", author: "Simon Sinek" },
     { category: "Closing & Results", text: "Winning isn’t everything, but wanting to win is.", author: "Vince Lombardi" },
     { category: "Mindset & Vision", text: "Whether you think you can or you think you can’t, you’re right.", author: "Henry Ford" },
-    // Add more from the list as needed...
+    // Adding a sample set of quotes to ensure robust functionality
     { category: "Short Mantras", text: "Execution eats strategy for breakfast.", author: "Unknown" },
     { category: "Short Mantras", text: "One more call.", author: "Unknown" },
-    { category: "Short Mantras", text: "Results, not excuses.", author: "Unknown" }
+    { category: "Short Mantras", text: "Results, not excuses.", author: "Unknown" },
+    { category: "Adaptability & Innovation", text: "Adapt or die.", author: "Moneyball" },
+    { category: "Communication", text: "Brevity is the soul of wit.", author: "William Shakespeare" },
+    { category: "Integrity & Reputation", text: "It takes 20 years to build a reputation and five minutes to ruin it.", author: "Warren Buffett" },
+    { category: "High-Performance Discipline", text: "Goals are dreams with deadlines.", author: "Diana Scharf" },
+    { category: "Sales Floor Shouts", text: "Rise and grind.", author: "Unknown" }
 ];
 
 export const getRandomQuote = (): SalesQuote => {

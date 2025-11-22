@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, CheckCircle, UserX, HelpCircle, ShieldCheck, Target, PhoneForwarded } from 'lucide-react';
+import { FileText, UserX, HelpCircle, Target, PhoneForwarded } from 'lucide-react';
 import { Lead } from '../types';
 
 interface CallScriptProps {

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { getSuccessQuote } from '../data/quotes';
-import { Trophy, X } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 export const CelebrationOverlay: React.FC = () => {
     const quote = getSuccessQuote();

@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
-import { Doughnut, Line } from 'react-chartjs-2';
-import { Phone, Clock, BarChart2, Target, ArrowRight, Play, FileText, ChevronRight } from 'lucide-react';
+import { Doughnut } from 'react-chartjs-2';
+import { Phone, Clock, BarChart2, Target, Play, FileText, ChevronRight } from 'lucide-react';
 import { Stats, Lead } from '../types';
 import { LeadCard } from './LeadCard';
 import { QuoteWidget } from './QuoteWidget';

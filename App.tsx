@@ -6,7 +6,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { Dashboard } from './components/Dashboard';
 import { CelebrationOverlay } from './components/CelebrationOverlay';
 import { 
-  Phone, Clock, BarChart2, Filter, FileText, ChevronRight, Target, ArrowUpDown
+  Filter, FileText, ArrowUpDown
 } from 'lucide-react';
 import { Lead, ViewState, Stats, LeadStatus } from './types';
 import { AGENTS } from './constants';

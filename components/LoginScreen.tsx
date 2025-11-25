@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Globe, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Globe, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface Agent {
   id: string;

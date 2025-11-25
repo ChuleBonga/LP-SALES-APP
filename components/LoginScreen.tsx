@@ -1,62 +1,44 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Globe, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface Agent {
   id: string;
   name: string;
-  avatar: string;
-  role: string;
-  specialty: string;
-  color: string;
   initials: string;
+  color: string;
 }
 
-// Mapping the simple string list to rich objects for UI
+// Simplified Agent List - Names only, no roles/status
 const AGENTS_DATA: Agent[] = [
   {
     id: 'Ziggy',
     name: 'Ziggy',
     initials: 'Z',
-    avatar: '', // Using initials for now
-    role: 'Senior Sales Agent',
-    specialty: 'Healthcare & Legal',
     color: 'from-blue-500 to-cyan-500'
   },
   {
     id: 'Nathan',
     name: 'Nathan',
     initials: 'N',
-    avatar: '',
-    role: 'Account Executive',
-    specialty: 'Education Sector',
     color: 'from-emerald-500 to-teal-500'
   },
   {
-    id: 'Veda',
-    name: 'Veda',
+    id: 'Vader',
+    name: 'Vader',
     initials: 'V',
-    avatar: '',
-    role: 'Client Success Lead',
-    specialty: 'Enterprise Accounts',
     color: 'from-purple-500 to-pink-500'
   },
   {
     id: 'Emily',
     name: 'Emily',
     initials: 'E',
-    avatar: '',
-    role: 'Sales Development',
-    specialty: 'Gov & Non-Profit',
     color: 'from-orange-500 to-amber-500'
   },
   {
     id: 'Zoe',
     name: 'Zoe',
     initials: 'Z',
-    avatar: '',
-    role: 'Outreach Specialist',
-    specialty: 'Rapid Response',
     color: 'from-indigo-500 to-blue-500'
   }
 ];
@@ -103,7 +85,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             transition={{ delay: 0.3 }}
             className="text-4xl font-extrabold text-slate-900 mb-2 tracking-tight"
           >
-            Sales Portal
+            Language People Sales Assistant
           </motion.h1>
           
           <motion.p 
@@ -118,7 +100,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         </div>
 
         {/* Agent Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {AGENTS_DATA.map((agent, index) => (
             <motion.button
               key={agent.id}
@@ -127,46 +109,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 + (index * 0.1) }}
               whileHover={{ 
-                scale: 1.03,
+                scale: 1.05,
                 y: -5,
                 boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
               }}
-              whileTap={{ scale: 0.98 }}
-              className="relative group bg-white rounded-2xl p-6 text-left shadow-lg border border-slate-100 hover:border-blue-100 transition-all duration-300 overflow-hidden"
+              whileTap={{ scale: 0.95 }}
+              className="relative group bg-white rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg border border-slate-100 hover:border-blue-100 transition-all duration-300 overflow-hidden aspect-[4/5]"
             >
               {/* Gradient Background on Hover */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${agent.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${agent.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
               
-              <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className="relative z-10 mb-4">
                 {/* Avatar */}
-                <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${agent.color} p-[2px] shadow-md`}>
-                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-2xl font-bold text-slate-700">
+                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${agent.color} p-[3px] shadow-md mx-auto`}>
+                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-3xl font-bold text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-slate-700 group-hover:to-slate-900 transition-all">
                     {agent.initials}
                   </div>
-                </div>
-                {/* Online Dot */}
-                <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                   <span className="text-[10px] font-bold text-emerald-700 uppercase">Online</span>
                 </div>
               </div>
 
               {/* Info */}
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-blue-700 transition-colors">
+              <div className="relative z-10 w-full">
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-blue-700 transition-colors">
                   {agent.name}
                 </h3>
-                <p className="text-sm font-medium text-slate-500 mb-3">{agent.role}</p>
-                
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-50 py-1.5 px-3 rounded-lg w-fit group-hover:bg-white group-hover:shadow-sm transition-all">
-                  <Globe className="w-3 h-3" />
-                  {agent.specialty}
-                </div>
               </div>
 
               {/* Hover Arrow */}
-              <div className="absolute bottom-6 right-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300">
-                <ArrowRight className="w-6 h-6" />
+              <div className="absolute bottom-4 opacity-0 group-hover:opacity-100 text-slate-400 group-hover:text-blue-500 group-hover:translate-y-[-4px] transition-all duration-300">
+                <ArrowRight className="w-5 h-5" />
               </div>
             </motion.button>
           ))}
@@ -180,7 +151,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           className="text-center mt-12"
         >
           <p className="text-xs text-slate-400 font-medium">
-            Language People Sales Portal v3.0.0 • Authorized Use Only
+            v3.0.0 • Authorized Use Only
           </p>
         </motion.div>
       </motion.div>

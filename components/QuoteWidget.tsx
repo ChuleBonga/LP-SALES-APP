@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Quote } from 'lucide-react';
 import { getRandomQuote, SalesQuote } from '../data/quotes';
 
-export const QuoteWidget: React.FC = () => {
+interface QuoteWidgetProps {
+    transparent?: boolean;
+}
+
+export const QuoteWidget: React.FC<QuoteWidgetProps> = ({ transparent }) => {
     const [quote, setQuote] = useState<SalesQuote | null>(null);
 
     useEffect(() => {
@@ -12,7 +16,7 @@ export const QuoteWidget: React.FC = () => {
     if (!quote) return null;
 
     return (
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 shadow-lg text-white relative overflow-hidden mb-6">
+        <div className={`${transparent ? '' : 'bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg mb-6'} p-6 text-white relative overflow-hidden`}>
             <div className="absolute top-0 right-0 -mt-4 -mr-4 text-white opacity-10">
                 <Quote size={100} />
             </div>

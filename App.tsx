@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
-import { StatCard } from './components/StatCard';
 import { LeadCard } from './components/LeadCard';
 import { CallView } from './components/CallView';
 import { LoginScreen } from './components/LoginScreen';
+import { Dashboard } from './components/Dashboard';
 import { CelebrationOverlay } from './components/CelebrationOverlay';
-import { QuoteWidget } from './components/QuoteWidget';
 import { 
   Phone, Clock, BarChart2, Filter, FileText, ChevronRight, Target, ArrowUpDown
 } from 'lucide-react';
@@ -14,7 +13,7 @@ import { AGENTS } from './constants';
 import './services/firebase'; // Ensure Firebase inits
 
 // Updated key to force fresh load from CSV
-const STORAGE_KEY = "lp_sales_leads_v6";
+const STORAGE_KEY = "lp_sales_leads_v7";
 const CSV_URL = '/outreach-list.csv';
 
 export default function App() {
@@ -123,6 +122,7 @@ export default function App() {
          status = 'Follow Up';
       }
       
+      // Use simple string from AGENTS array for assignment to keep logic consistent
       const assignedAgent = AGENTS[(i - 1) % AGENTS.length];
 
       newLeads.push({
@@ -344,12 +344,15 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-brand-light selection:text-white">
       {triggerCelebration && <CelebrationOverlay />}
       
-      <Header 
-        view={view} 
-        setView={setView} 
-        user={user} 
-        onLogout={() => setUser(null)} 
-      />
+      {/* Header is now only shown in non-dashboard views or can be modified */}
+      {view !== 'dashboard' && (
+         <Header 
+           view={view} 
+           setView={setView} 
+           user={user} 
+           onLogout={() => setUser(null)} 
+         />
+      )}
       
       <input 
         type="file" 
@@ -359,213 +362,121 @@ export default function App() {
         className="hidden" 
       />
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {view === 'dashboard' && (
-          <div className="space-y-8 animate-fade-in">
-            <div className="flex flex-col md:flex-row justify-between items-end border-b border-gray-200 pb-8 gap-4">
-              <div>
-                <h2 className="text-4xl font-extrabold text-brand-dark tracking-tight">
-                  Good Afternoon, {user}
-                </h2>
-                <p className="text-gray-500 mt-2 text-lg">
-                  You are <span className="font-bold text-brand-light">{Math.max(0, stats.weeklyGoal - stats.weeklyProgress)}</span> calls away from your weekly goal.
-                </p>
-              </div>
-              <div className="flex gap-3 w-full md:w-auto">
-                 <button
-                    onClick={downloadCSV}
-                    className="bg-white border-2 border-gray-200 text-gray-600 hover:border-brand-light hover:text-brand-light px-6 py-4 rounded-full shadow-sm flex items-center space-x-2 transition-all font-bold text-sm w-full md:w-auto justify-center"
-                  >
-                    <FileText className="w-5 h-5" />
-                    <span>Export Updated CSV</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      const nextLead = myLeads.find((l) => l.status === 'New');
-                      if (nextLead) handleStartCall(nextLead);
-                      else setView('leads');
-                    }}
-                    className="bg-gradient-to-r from-brand-dark to-brand-light hover:from-[#002a42] hover:to-[#0077a3] text-white px-8 py-4 rounded-full shadow-lg flex items-center space-x-3 transition-all transform hover:scale-105 font-bold text-lg w-full md:w-auto justify-center"
-                  >
-                    <Phone className="w-6 h-6 animate-pulse" />
-                    <span>Start Power Hour</span>
-                  </button>
-              </div>
-            </div>
+      {/* Render new Dashboard when in dashboard view */}
+      {view === 'dashboard' && (
+        <Dashboard 
+          user={user} 
+          stats={stats} 
+          recommendedLeads={myLeads.filter(l => ['New', 'Follow Up'].includes(l.status)).slice(0, 5)}
+          onStartPowerHour={() => {
+             const nextLead = myLeads.find((l) => l.status === 'New');
+             if (nextLead) handleStartCall(nextLead);
+             else setView('leads');
+          }}
+          onExport={downloadCSV}
+          onViewAll={() => setView('leads')}
+          onCallLead={handleStartCall}
+        />
+      )}
 
-            <QuoteWidget />
+      {/* Only wrap other views in container */}
+      {view !== 'dashboard' && (
+        <main className="container mx-auto px-4 py-8 max-w-7xl">
+          
+          {view === 'leads' && (
+            <div className="animate-fade-in space-y-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                  <h2 className="text-3xl font-bold text-brand-dark">
+                    {statusFilter !== 'All' ? `${statusFilter} Leads` : 'Your Assigned Leads'}
+                    <span className="ml-3 text-lg font-medium text-gray-400">({myLeads.length})</span>
+                  </h2>
+                  <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 shadow-sm flex-grow md:flex-grow-0">
+                      <ArrowUpDown className="w-4 h-4 text-gray-500" />
+                      <select 
+                        value={sortOption} 
+                        onChange={(e) => setSortOption(e.target.value)}
+                        className="bg-transparent border-none text-gray-600 text-sm font-medium focus:ring-0 cursor-pointer outline-none pr-2"
+                      >
+                        <option value="default">Sort by Default</option>
+                        <option value="name">Name (A-Z)</option>
+                        <option value="company">Company (A-Z)</option>
+                        <option value="status">Status</option>
+                        <option value="lastContact">Last Contact (Recent)</option>
+                      </select>
+                    </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white p-6 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-gray-100 flex items-center space-x-4 hover:-translate-y-1 transition-transform duration-300 group cursor-default">
-                <div className="p-4 rounded-full bg-teal-50 bg-opacity-50 group-hover:bg-opacity-100 transition-all">
-                  <Target className="w-6 h-6 text-teal-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Weekly Goal</p>
-                  <div className="flex items-baseline gap-1">
-                    <h3 className="text-3xl font-extrabold text-gray-800 mt-1">{stats.weeklyProgress}</h3>
-                    <span className="text-sm text-gray-400 font-semibold">/ {stats.weeklyGoal}</span>
+                    <button 
+                      onClick={() => setShowFilter(!showFilter)}
+                      className={`flex-grow md:flex-grow-0 flex items-center justify-center space-x-2 px-5 py-2.5 border rounded-lg font-medium shadow-sm transition-colors ${
+                        showFilter || statusFilter !== 'All'
+                          ? 'bg-brand-light text-white border-brand-light' 
+                          : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Filter className="w-4 h-4" />
+                      <span>{statusFilter !== 'All' ? statusFilter : 'Filter'}</span>
+                    </button>
+                    <button 
+                      onClick={handleImportClick}
+                      className="flex-grow md:flex-grow-0 flex items-center justify-center space-x-2 px-5 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 font-medium shadow-sm transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Import CSV</span>
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              <StatCard title="Calls Made Today" value={stats.calledToday} icon={Phone} color="text-blue-600" bgColor="bg-blue-50" />
-              <StatCard title="Needs Call Back" value={stats.followUp} icon={Clock} color="text-amber-500" bgColor="bg-amber-50" />
-              <StatCard title="Closed Deals" value={stats.closed} icon={BarChart2} color="text-green-500" bgColor="bg-green-50" />
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-bold text-xl text-brand-dark">Recommended Next Calls</h3>
-                <button
-                  onClick={() => setView('leads')}
-                  className="text-brand-light text-sm font-bold hover:underline flex items-center group"
-                >
-                  View All <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {myLeads
-                  .filter((l) => ['New', 'Follow Up'].includes(l.status))
-                  .slice(0, 5)
-                  .map((lead) => (
-                    <div
-                      key={lead.id}
-                      className="px-8 py-5 flex flex-col md:flex-row items-start md:items-center justify-between hover:bg-blue-50 transition-colors group cursor-pointer gap-4"
-                      onClick={() => handleStartCall(lead)}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div
-                          className={`w-3 h-3 rounded-full ring-2 ring-offset-2 ${
-                            lead.status === 'New'
-                              ? 'bg-blue-500 ring-blue-200'
-                              : 'bg-amber-500 ring-amber-200'
-                          }`}
-                        ></div>
-                        <div>
-                          <p className="font-bold text-gray-800 text-lg">
-                            {lead.firstName} {lead.lastName}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {lead.company} •{' '}
-                            <span className="font-medium text-gray-400">{lead.timezone}</span>
-                          </p>
-                        </div>
-                      </div>
+                {showFilter && (
+                  <div className="flex flex-wrap gap-2 p-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-fade-in-up">
+                    {(['All', 'New', 'In Progress', 'Follow Up', 'Closed', 'Lost'] as const).map((status) => (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartCall(lead);
-                        }}
-                        className="text-brand-light bg-white border border-brand-light hover:bg-brand-light hover:text-white px-6 py-2 rounded-full text-sm font-bold transition-all shadow-sm w-full md:w-auto"
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all ${
+                          statusFilter === status
+                            ? 'bg-brand-dark text-white shadow-md'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
                       >
-                        Call Now
+                        {status}
                       </button>
-                    </div>
-                  ))}
-                {myLeads.length === 0 && (
-                  <div className="p-8 text-center text-gray-500">
-                    No leads assigned to you yet. Import some to get started!
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myLeads.length > 0 ? (
+                  myLeads.map((lead) => (
+                    <LeadCard key={lead.id} lead={lead} onCall={handleStartCall} />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-20 bg-white rounded-xl border border-gray-200 text-gray-400 flex flex-col items-center">
+                    <Filter className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="text-lg font-medium">No leads found matching "{statusFilter}"</p>
+                    <button 
+                      onClick={() => setStatusFilter('All')}
+                      className="mt-4 text-brand-light hover:underline text-sm font-bold"
+                    >
+                      Clear Filters
+                    </button>
                   </div>
                 )}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {view === 'leads' && (
-          <div className="animate-fade-in space-y-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                <h2 className="text-3xl font-bold text-brand-dark">
-                  {statusFilter !== 'All' ? `${statusFilter} Leads` : 'Your Assigned Leads'}
-                  <span className="ml-3 text-lg font-medium text-gray-400">({myLeads.length})</span>
-                </h2>
-                <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                  <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 shadow-sm flex-grow md:flex-grow-0">
-                    <ArrowUpDown className="w-4 h-4 text-gray-500" />
-                    <select 
-                      value={sortOption} 
-                      onChange={(e) => setSortOption(e.target.value)}
-                      className="bg-transparent border-none text-gray-600 text-sm font-medium focus:ring-0 cursor-pointer outline-none pr-2"
-                    >
-                      <option value="default">Sort by Default</option>
-                      <option value="name">Name (A-Z)</option>
-                      <option value="company">Company (A-Z)</option>
-                      <option value="status">Status</option>
-                      <option value="lastContact">Last Contact (Recent)</option>
-                    </select>
-                  </div>
-
-                  <button 
-                    onClick={() => setShowFilter(!showFilter)}
-                    className={`flex-grow md:flex-grow-0 flex items-center justify-center space-x-2 px-5 py-2.5 border rounded-lg font-medium shadow-sm transition-colors ${
-                      showFilter || statusFilter !== 'All'
-                        ? 'bg-brand-light text-white border-brand-light' 
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Filter className="w-4 h-4" />
-                    <span>{statusFilter !== 'All' ? statusFilter : 'Filter'}</span>
-                  </button>
-                  <button 
-                    onClick={handleImportClick}
-                    className="flex-grow md:flex-grow-0 flex items-center justify-center space-x-2 px-5 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 font-medium shadow-sm transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>Import CSV</span>
-                  </button>
-                </div>
-              </div>
-
-              {showFilter && (
-                <div className="flex flex-wrap gap-2 p-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-fade-in-up">
-                  {(['All', 'New', 'In Progress', 'Follow Up', 'Closed', 'Lost'] as const).map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => setStatusFilter(status)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all ${
-                        statusFilter === status
-                          ? 'bg-brand-dark text-white shadow-md'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myLeads.length > 0 ? (
-                myLeads.map((lead) => (
-                  <LeadCard key={lead.id} lead={lead} onCall={handleStartCall} />
-                ))
-              ) : (
-                <div className="col-span-full text-center py-20 bg-white rounded-xl border border-gray-200 text-gray-400 flex flex-col items-center">
-                  <Filter className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="text-lg font-medium">No leads found matching "{statusFilter}"</p>
-                  <button 
-                    onClick={() => setStatusFilter('All')}
-                    className="mt-4 text-brand-light hover:underline text-sm font-bold"
-                  >
-                    Clear Filters
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {view === 'call' && activeLead && (
-          <CallView 
-            lead={activeLead} 
-            onUpdateLead={handleUpdateLead}
-            onCancel={handleCancelCall}
-          />
-        )}
-      </main>
+          {view === 'call' && activeLead && (
+            <CallView 
+              lead={activeLead} 
+              onUpdateLead={handleUpdateLead}
+              onCancel={handleCancelCall}
+            />
+          )}
+        </main>
+      )}
     </div>
   );
 }

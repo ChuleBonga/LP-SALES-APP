@@ -1,0 +1,247 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
+import { Doughnut, Line } from 'react-chartjs-2';
+import { Phone, Clock, BarChart2, Target, ArrowRight, Play, FileText, ChevronRight } from 'lucide-react';
+import { Stats, Lead } from '../types';
+import { LeadCard } from './LeadCard';
+import { QuoteWidget } from './QuoteWidget';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
+
+interface DashboardProps {
+  user: string;
+  stats: Stats;
+  recommendedLeads: Lead[];
+  onStartPowerHour: () => void;
+  onExport: () => void;
+  onViewAll: () => void;
+  onCallLead: (lead: Lead) => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ 
+  user, 
+  stats, 
+  recommendedLeads, 
+  onStartPowerHour, 
+  onExport,
+  onViewAll,
+  onCallLead 
+}) => {
+  const weekProgress = Math.min(100, (stats.weeklyProgress / stats.weeklyGoal) * 100);
+  const remaining = Math.max(0, stats.weeklyGoal - stats.weeklyProgress);
+
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Morning';
+    if (hour < 18) return 'Afternoon';
+    return 'Evening';
+  };
+
+  // Chart Data
+  const doughnutData = {
+    labels: ['Completed', 'Remaining'],
+    datasets: [{
+      data: [stats.weeklyProgress, remaining],
+      backgroundColor: ['#3B82F6', '#E2E8F0'], // blue-500, slate-200
+      borderWidth: 0,
+      cutout: '75%',
+    }]
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-20">
+      {/* Hero Section with Gradient */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-[#003B5C] via-[#004d7a] to-[#0088BB] text-white px-4 pt-8 pb-20 rounded-b-[3rem] shadow-xl relative overflow-hidden"
+      >
+        {/* Decorative circles */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white opacity-5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-[#0088BB] opacity-20 rounded-full blur-3xl"></div>
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+            <div>
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight text-white">
+                  Good {getTimeOfDay()}, {user}! 👋
+                </h1>
+                <p className="text-blue-100 text-lg font-medium flex items-center gap-2">
+                  <Target className="w-5 h-5 text-yellow-300" />
+                  You are <span className="font-bold text-yellow-300 text-xl">{remaining}</span> calls away from your weekly goal
+                </p>
+              </motion.div>
+            </div>
+            
+            <div className="flex gap-3 w-full md:w-auto">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onExport}
+                className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg w-full md:w-auto"
+              >
+                <FileText className="w-5 h-5" />
+                Export CSV
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onStartPowerHour}
+                className="bg-white text-[#003B5C] hover:bg-blue-50 px-8 py-3 rounded-xl font-bold shadow-xl transition-all duration-200 flex items-center justify-center gap-2 w-full md:w-auto"
+              >
+                <Play className="w-5 h-5 fill-current" />
+                Start Power Hour
+              </motion.button>
+            </div>
+          </div>
+          
+          {/* Integrated Quote Widget with Glassmorphism */}
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden">
+             <QuoteWidget transparent /> 
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Stats Grid - Overlapping the Hero */}
+      <div className="max-w-7xl mx-auto px-4 -mt-12 relative z-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          
+          {/* Weekly Goal Card - Featured */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col justify-between relative overflow-hidden group"
+          >
+             <div className="absolute right-0 top-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+             
+             <div className="flex justify-between items-start mb-4 relative z-10">
+               <div>
+                 <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Weekly Goal</p>
+                 <div className="flex items-baseline gap-1">
+                    <h3 className="text-4xl font-extrabold text-slate-900">{stats.weeklyProgress}</h3>
+                    <span className="text-lg font-semibold text-slate-400">/ {stats.weeklyGoal}</span>
+                 </div>
+               </div>
+               <div className="w-12 h-12">
+                 <Doughnut data={doughnutData} options={{ responsive: true, maintainAspectRatio: true, cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }} />
+               </div>
+             </div>
+             
+             <div>
+                <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
+                  <span>Progress</span>
+                  <span>{weekProgress.toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${weekProgress}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    className="bg-gradient-to-r from-blue-500 to-[#0088BB] h-full rounded-full"
+                  />
+                </div>
+             </div>
+          </motion.div>
+
+          {/* Calls Made Today */}
+          <StatCard 
+            label="Calls Made Today" 
+            value={stats.calledToday} 
+            icon={Phone} 
+            color="text-emerald-600" 
+            bgColor="bg-emerald-50" 
+            delay={0.2} 
+          />
+
+          {/* Needs Call Back */}
+          <StatCard 
+            label="Needs Call Back" 
+            value={stats.followUp} 
+            icon={Clock} 
+            color="text-amber-500" 
+            bgColor="bg-amber-50" 
+            delay={0.3} 
+          />
+
+          {/* Closed Deals */}
+          <StatCard 
+            label="Closed Deals" 
+            value={stats.closed} 
+            icon={BarChart2} 
+            color="text-purple-600" 
+            bgColor="bg-purple-50" 
+            delay={0.4} 
+          />
+        </div>
+
+        {/* Recommended Next Calls Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              Recommended Next Calls
+              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">{recommendedLeads.length}</span>
+            </h2>
+            <button 
+              onClick={onViewAll}
+              className="text-[#0088BB] hover:text-[#003B5C] font-bold text-sm flex items-center gap-1 group transition-colors"
+            >
+              View All Leads <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {recommendedLeads.length > 0 ? (
+              recommendedLeads.map((lead, idx) => (
+                <motion.div 
+                  key={lead.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * idx }}
+                >
+                  <LeadCard lead={lead} onCall={onCallLead} />
+                </motion.div>
+              ))
+            ) : (
+              <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-300">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Phone className="w-8 h-8 text-slate-300" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-700">All Caught Up!</h3>
+                <p className="text-slate-500">You've contacted all your priority leads.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+// Internal Stat Card Component for Dashboard
+const StatCard = ({ label, value, icon: Icon, color, bgColor, delay }: any) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay }}
+    className="bg-white rounded-2xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100 hover:-translate-y-1 transition-all duration-300 flex items-center gap-4 group"
+  >
+    <div className={`p-4 rounded-2xl ${bgColor} ${color} group-hover:scale-110 transition-transform duration-300`}>
+      <Icon className="w-6 h-6" />
+    </div>
+    <div>
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+      <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{value}</h3>
+    </div>
+  </motion.div>
+);

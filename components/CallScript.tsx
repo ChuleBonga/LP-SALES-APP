@@ -1,201 +1,183 @@
 import React, { useState } from 'react';
-import { FileText, UserX, HelpCircle, Target, PhoneForwarded } from 'lucide-react';
+import { MessageSquare, Copy, Check, Zap, PhoneForwarded } from 'lucide-react';
 import { Lead } from '../types';
 
 interface CallScriptProps {
   lead: Lead;
 }
 
-export const CallScript: React.FC<CallScriptProps> = ({ lead }) => {
-  const [activeTab, setActiveTab] = useState('intro');
+// --- DATA: SALES SCRIPTS ---
+const salesScripts = [
+  // SECTION 1: INTRODUCTION
+  {
+    id: "intro_1",
+    section: "Opener",
+    title: "The Introduction",
+    text: "Hi, is this [Name]? Hi [Name], I’m Ziggy with Language People. I work with schools and agencies that serve a lot of multilingual families, and I help them make sure language is never the reason a parent or client is confused or unhappy. Do you have about 30 seconds for me to share why I’m calling?"
+  },
+  {
+    id: "intro_2",
+    section: "Opener",
+    title: "The Short Story (Problem)",
+    text: "We talk to a lot of schools and clinics that have great staff but no simple way to handle it when a parent or client doesn’t speak English well. In the moment, people scramble: they pull a bilingual staff member out of their job, or they hope their vendor can pick up quickly. It creates stress, delays, and sometimes real risk if something important is misunderstood. Language People steps in to make that moment calm and predictable instead of chaotic."
+  },
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'intro':
-        return (
-          <div className="space-y-4 animate-fade-in-up">
-            <div className="bg-[#F0F9FC] p-6 rounded-xl border-l-4 border-brand-light shadow-sm">
-              <p className="text-xl text-brand-dark font-bold mb-2">"Hi, is this {lead.firstName}?"</p>
-              <p className="text-gray-600 text-sm italic">Wait for confirmation...</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-gray-700 leading-relaxed text-lg">
-                "Hi {lead.firstName}, this is <strong>[Your Name]</strong> with <span className="text-brand-dark font-bold">Language People</span>. 
-                I noticed {lead.company} serves a diverse community, and I am reaching out because we help organizations like yours bridge language barriers and reduce liability risk.
-                <br/><br/>
-                <strong>Do you have 30 seconds so I can tell you why I am calling?</strong>"
-              </p>
-            </div>
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-gray-600">
-              <p className="font-bold mb-1 text-gray-800">If they ask: "Is this a sales call?"</p>
-              "It is an outreach call, yes. My goal is just to see if we might be a useful backup resource for you. If it does not sound helpful, you can tell me no."
-            </div>
-          </div>
-        );
-      case 'discovery':
-        return (
-          <div className="space-y-4 animate-fade-in-up">
-             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <h3 className="font-bold text-brand-dark mb-3 flex items-center"><HelpCircle className="w-4 h-4 mr-2"/> Discovery Questions</h3>
-              <ul className="space-y-4">
-                <li className="text-gray-700">
-                  "Just so I do not waste your time, <strong>how are you currently handling it when a parent or client does not speak English?</strong>"
-                </li>
-                <li className="text-gray-700">
-                  "Do you use a vendor, or do you rely on bilingual staff?"
-                </li>
-                 <li className="text-gray-700">
-                  "Where do you still run into challenges or delays with that approach?"
-                </li>
-              </ul>
-            </div>
-             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm text-blue-800">
-              <strong>Listen for pain points:</strong> Long hold times, inability to find languages, staff being pulled away from their jobs.
-            </div>
-          </div>
-        );
-      case 'pitch':
-        return (
-          <div className="space-y-4 animate-fade-in-up">
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <h3 className="font-bold text-brand-dark mb-3">If they use Bilingual Staff:</h3>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                "That is very common. The challenge is it pulls them away from their actual job, and there is liability if something is interpreted incorrectly. 
-                <br/><br/>
-                <strong>What we do is give you certified interpreters on demand, 24/7.</strong> That way your staff can stay focused, and you have a compliant solution."
-              </p>
-              
-              <div className="border-t border-gray-100 my-4"></div>
+  // SECTION 2: THE PITCHES
+  {
+    id: "pitch_general",
+    section: "Pitch",
+    title: "One-Liner (General)",
+    text: "Short version: we give your staff a single number and set of tools they can use to reach professional interpreters by phone, video, or in person, and you simply pay as you go when you use it. No demos, no big setup – just real support when you actually need it."
+  },
+  {
+    id: "pitch_no_provider",
+    section: "Pitch",
+    title: "Scenario: No Provider",
+    text: "If you don’t have a formal provider now, that actually makes this simple. We set your school or agency up as a customer in our dispatch system. The next time a non-English-speaking parent or client needs to talk, your staff call our number, tell us the language, and our dispatch team connects a qualified interpreter. You’re only billed when you request an interpreter under your account – so it’s truly pay-as-you-go, not a subscription."
+  },
+  {
+    id: "pitch_bilingual_staff",
+    section: "Pitch",
+    title: "Scenario: Relies on Staff",
+    text: "What you do now is very common – grabbing whoever speaks the language. The downside is that it pulls staff away from their real jobs, and they’re not trained interpreters, so important details can be missed. With Language People, your staff keep doing what they’re hired to do. When language comes up, they call our number, and a professional joins by phone or video. You still have your bilingual staff, but you’re not leaning on them for every high-stakes conversation."
+  },
+  {
+    id: "pitch_has_vendor",
+    section: "Pitch",
+    title: "Scenario: Has a Vendor",
+    text: "It’s great that you already have a provider. I’m not asking you to switch. Most organizations that talk to us use Language People as a backup and overflow solution for when their main vendor can’t find a specific language, or they’re stuck on hold. Because we’re pay-as-you-go, there’s no downside to having us in your system as a second option – you only see a bill when you actually use us."
+  },
 
-              <h3 className="font-bold text-brand-dark mb-3">If they have a Vendor:</h3>
-              <p className="text-gray-700 leading-relaxed">
-                "That is great. Many of our partners use us as a <strong>backup provider</strong> for when their main vendor has long wait times or cannot find a language.
-                <br/><br/>
-                Having us set up costs nothing until you use us, and it prevents your staff from being stuck waiting."
-              </p>
-            </div>
-          </div>
-        );
-      case 'objection':
-        return (
-          <div className="space-y-4 animate-fade-in-up">
-             <div className="grid gap-3">
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-orange-300 transition-colors">
-                    <strong className="block text-orange-700 text-xs font-bold uppercase mb-2">"We already have a vendor"</strong>
-                    <p className="text-gray-700 text-sm">"Totally understand. The only reason to add us is as a safety net. Setting us up costs nothing. Why not have us as a backup option so your team is never stuck?"</p>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-orange-300 transition-colors">
-                    <strong className="block text-orange-700 text-xs font-bold uppercase mb-2">"We use bilingual staff"</strong>
-                    <p className="text-gray-700 text-sm">"That is great. But it pulls them away from work and creates liability risks. Our certified interpreters protect your staff. Would it help to have us ready for high-risk conversations?"</p>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-orange-300 transition-colors">
-                    <strong className="block text-orange-700 text-xs font-bold uppercase mb-2">"No Budget"</strong>
-                    <p className="text-gray-700 text-sm">"I get that. We are pay-as-you-go. No monthly fees. You only pay when you use us. Does that sound more workable?"</p>
-                </div>
-                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-orange-300 transition-colors">
-                    <strong className="block text-orange-700 text-xs font-bold uppercase mb-2">"Send me info"</strong>
-                    <p className="text-gray-700 text-sm">"I will email you a one-pager. I've found a 5-minute demo is much better than a cold doc. Can we schedule a short demo next Tuesday so you can see it live?"</p>
-                </div>
-             </div>
-          </div>
-        );
-      case 'close':
-        return (
-            <div className="space-y-4 animate-fade-in-up">
-               <div className="bg-green-50 p-5 rounded-xl border-l-4 border-green-500 shadow-sm">
-                <strong className="block text-green-900 text-sm font-bold uppercase mb-2 flex items-center"><Target className="w-4 h-4 mr-2"/>Primary Close: Backup Vendor</strong>
-                <p className="text-gray-800">
-                    "I think we would be very useful as a backup option. I will send over a short service agreement, and once that is in place your team can call whenever they need. <strong>Who is the best person to send that to?</strong>"
-                </p>
-               </div>
-               
-               <div className="bg-blue-50 p-5 rounded-xl border-l-4 border-blue-500 shadow-sm">
-                <strong className="block text-blue-900 text-sm font-bold uppercase mb-2 flex items-center"><Target className="w-4 h-4 mr-2"/>Demo Close</strong>
-                <p className="text-gray-800">
-                    "To make this real for you, I would like to show you exactly how your staff would connect. <strong>Can we schedule a 10-minute demo sometime this week?</strong>"
-                </p>
-               </div>
-            </div>
-        );
-      case 'person left':
-        return (
-          <div className="space-y-4 animate-fade-in-up">
-            <div className="bg-amber-50 p-5 rounded-xl border-l-4 border-amber-400 shadow-sm">
-              <strong className="flex items-center text-amber-900 text-xs font-bold uppercase tracking-wider mb-2">
-                <UserX className="w-4 h-4 mr-2" />
-                Contact No Longer There
-              </strong>
-              <p className="text-gray-800 italic font-medium">
-                "I apologize for the confusion we were attempting to reach them about interpreting services they had inquired about, may I ask if you may be open to viewing our rate sheet for our interpreting services?"
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-               <p className="text-gray-700 leading-relaxed mb-2 font-bold text-sm text-brand-dark uppercase">Follow Up Questions</p>
-               <ul className="space-y-3">
-                <li className="flex items-start text-gray-700 bg-slate-50 p-3 rounded-lg">
-                  <span className="font-bold text-brand-light mr-2">1.</span> 
-                  "Who has taken over their responsibilities regarding language services?"
-                </li>
-                <li className="flex items-start text-gray-700 bg-slate-50 p-3 rounded-lg">
-                  <span className="font-bold text-brand-light mr-2">2.</span> 
-                  "Do you have their direct email so I can update my records?"
-                </li>
-              </ul>
-            </div>
-          </div>
-        );
-      case 'voicemail':
-        return (
-          <div className="bg-slate-50 p-6 rounded-xl border-2 border-dashed border-gray-300 animate-fade-in-up">
-            <div className="flex items-center text-gray-500 mb-3">
-                <PhoneForwarded className="w-5 h-5 mr-2"/>
-                <span className="font-bold text-xs uppercase">Voicemail Script</span>
-            </div>
-            <p className="text-gray-700 leading-relaxed font-mono text-sm">
-              "Hi {lead.firstName}, this is [Your Name] with Language People. I am calling to share how we can help
-              {lead.company} reduce costs and liability on interpretation services. I will try you again next week, or you can reach me at (800) 894-2345."
-            </p>
-          </div>
-        );
-      default:
-        return null;
-    }
+  // SECTION 3: THE CLOSE
+  {
+    id: "close_1",
+    section: "Close",
+    title: "The Standard Close",
+    text: "Here’s what I’d suggest as a next step to make this real but still low-pressure: We set you up as a pay-as-you-go account in our system. There’s no monthly fee and no requirement to use us. It just means that the next time your staff need an interpreter, they can call us and we’ll handle it. What’s the best email for me to send the basic agreement and staff instructions to?"
+  },
+  {
+    id: "close_hesitant",
+    section: "Close",
+    title: "Close for Hesitant Prospects",
+    text: "No worries – I’ll send a one-page overview and the basic terms so you can share it with your principal or director. Once you’re set up, you can try us the next time a situation comes up, and if you never need us, you never pay us."
+  },
+
+  // SECTION 4: REHASH / OBJECTIONS
+  {
+    id: "obj_budget",
+    section: "Rehash",
+    title: "Obj: Budget / Cost",
+    text: "Totally understand. The good news is this is not a big contract – it’s pay-as-you-go. Having the account open is free; you only see charges when you actually bring an interpreter into a conversation."
+  },
+  {
+    id: "obj_vendor",
+    section: "Rehash",
+    title: "Obj: Already have a Vendor",
+    text: "Right, and we’re not trying to replace them. Think of us as your contingency plan. If your main vendor covers it, great. If they’re busy or can’t provide the language, you have a backup. No extra cost to keep us on file."
+  },
+  {
+    id: "obj_rare",
+    section: "Rehash",
+    title: "Obj: We rarely need this",
+    text: "True, it might only come up a handful of times a year – but those are usually sensitive moments. Setting us up costs nothing and gives you a professional solution ready for those one or two times it really matters."
+  },
+  {
+    id: "rehash_close",
+    section: "Rehash",
+    title: "Final Reassurance",
+    text: "So just to rehash: Your staff get one simple process for language support, you only pay when you use an interpreter, and you can keep everything else you’re already doing in place. If we start with getting your account set up, would you be comfortable sharing the best contact info so I can send that over?"
+  },
+
+  // SECTION 5: VOICEMAIL
+  {
+    id: "voicemail_1",
+    section: "Voicemail",
+    title: "The 'Backup Plan' Voicemail",
+    text: "Hi [Name], this is Ziggy with Language People. I’m calling because a lot of schools and agencies keep us on file as a backup for when their staff is busy or their main interpreter vendor falls through. We’re strictly pay-as-you-go, so there’s no cost to set us up as a contingency plan. I’m going to send you a quick email with the details—subject line will say 'Interpreter Backup'—but you can also reach me here at (800) 894-2345. Thanks, [Name]."
+  }
+];
+
+// --- SUB-COMPONENT: Single Script Card ---
+const ScriptCard: React.FC<{ script: typeof salesScripts[0] }> = ({ script }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(script.text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const tabs = [
-      { id: 'intro', label: '1. Intro' },
-      { id: 'discovery', label: '2. Discovery' },
-      { id: 'pitch', label: '3. Pitch' },
-      { id: 'objection', label: '4. Objection' },
-      { id: 'close', label: '5. Close' },
-      { id: 'person left', label: 'Person Left' },
-      { id: 'voicemail', label: 'Voicemail' }
-  ];
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500 mb-4 transition-all hover:shadow-md group">
+      <div className="flex justify-between items-start mb-3">
+        <h3 className="font-bold text-gray-800 text-lg">{script.title}</h3>
+        <button 
+          onClick={handleCopy}
+          className="text-gray-300 hover:text-blue-600 transition-colors p-1"
+          title="Copy script to clipboard"
+        >
+          {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+        </button>
+      </div>
+      <p className="text-gray-700 leading-relaxed text-base whitespace-pre-wrap font-medium">{script.text}</p>
+    </div>
+  );
+};
+
+export const CallScript: React.FC<CallScriptProps> = ({ lead }) => {
+  const [activeScriptSection, setActiveScriptSection] = useState('Opener');
+  
+  const scriptSections = ['Opener', 'Pitch', 'Close', 'Rehash', 'Voicemail'];
+  const currentScripts = salesScripts.filter(s => s.section === activeScriptSection);
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 h-full flex flex-col overflow-hidden">
-      <div className="bg-brand-dark text-white px-6 py-4 flex items-center justify-between">
+      {/* Header */}
+      <div className="bg-brand-dark text-white px-6 py-4 flex items-center justify-between shrink-0">
         <div className="flex items-center">
-          <FileText className="w-5 h-5 mr-2 text-brand-light" />
+          <MessageSquare className="w-5 h-5 mr-2 text-brand-light" />
           <span className="font-bold tracking-wide uppercase text-sm">Sales Process Assistant</span>
         </div>
       </div>
-      <div className="bg-gray-50 p-2 flex space-x-1 overflow-x-auto border-b border-gray-200 scrollbar-hide">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-3 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-white text-brand-dark shadow-md transform scale-[1.02] border border-gray-100'
-                : 'text-gray-500 hover:bg-gray-200'
-            } ${tab.id === 'person left' || tab.id === 'voicemail' ? 'text-amber-600' : ''}`}
-          >
-            {tab.label}
-          </button>
-        ))}
+
+      {/* Navigation Tabs - using flex-wrap to fix overflow issues */}
+      <div className="bg-gray-50 p-3 border-b border-gray-200">
+        <div className="flex flex-wrap gap-2">
+            {scriptSections.map((section) => (
+            <button
+                key={section}
+                onClick={() => setActiveScriptSection(section)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all ${
+                activeScriptSection === section 
+                    ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500 ring-offset-1' 
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 shadow-sm'
+                }`}
+            >
+                {section === 'Rehash' ? 'Objection' : section}
+            </button>
+            ))}
+        </div>
       </div>
-      <div className="p-6 flex-grow overflow-y-auto bg-white">{renderContent()}</div>
+
+      {/* Content Area */}
+      <div className="p-4 flex-grow overflow-y-auto bg-slate-50">
+        <div className="flex items-center space-x-2 text-gray-500 text-xs uppercase tracking-wider font-bold mb-4">
+            <Zap size={12} className="text-amber-500" />
+            <span>Current Phase: {activeScriptSection}</span>
+        </div>
+
+        {currentScripts.map((script) => (
+            <ScriptCard key={script.id} script={script} />
+        ))}
+
+        {/* Contextual Hints */}
+        {activeScriptSection === 'Pitch' && (
+            <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 text-yellow-800 text-xs mt-4 flex items-start gap-2 animate-fade-in">
+            <div className="mt-0.5"><Zap size={14}/></div>
+            <p><strong>Pro Tip:</strong> Listen carefully to identify if they rely on bilingual staff or an external vendor, then read the matching card above.</p>
+            </div>
+        )}
+      </div>
     </div>
   );
 };

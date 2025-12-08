@@ -16,7 +16,9 @@
     "canvas-confetti": "^1.9.2",
     "framer-motion": "^11.0.8",
     "chart.js": "^4.4.1",
-    "react-chartjs-2": "^5.2.0"
+    "react-chartjs-2": "^5.2.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",

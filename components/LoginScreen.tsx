@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
@@ -25,8 +24,8 @@ const AGENTS_DATA: Agent[] = [
     color: 'from-emerald-500 to-teal-500'
   },
   {
-    id: 'Vader',
-    name: 'Vader',
+    id: 'Veda',
+    name: 'Veda',
     initials: 'V',
     color: 'from-purple-500 to-pink-500'
   },
